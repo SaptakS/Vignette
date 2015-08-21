@@ -1,2 +1,2 @@
 # Vignette
-A image processing project
+An image processing project
