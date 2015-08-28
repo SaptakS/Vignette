@@ -70,6 +70,7 @@ for painter in painters:
     #print painter
     try:
         go(painter,'imageDB')
+        print "Done ",painter
     except ValueError, e:
         print "could not find"
         continue
