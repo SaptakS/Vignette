@@ -20,7 +20,8 @@ def go(query, path):
              'v=1.0&q=' + query + '&start=%d'
 
 
-  
+  if os.path.exists(BASE_PATH):
+      return
 
   if not os.path.exists(BASE_PATH):
     os.makedirs(BASE_PATH)
@@ -28,34 +29,38 @@ def go(query, path):
   start = 0 # Google's start query string parameter for pagination.
   img_title = 1
   while start < 60: # Google will only return a max of 56 results.
-    r = requests.get(BASE_URL % start,)
-    for image_info in json.loads(r.text)['responseData']['results']:
-      url = image_info['unescapedUrl']
-      try:
-        image_r = requests.get(url)
-      except ConnectionError, e:
-        print 'could not download %s' % url
+    try:
+        r = requests.get(BASE_URL % start,)
+        for image_info in json.loads(r.text)['responseData']['results']:
+          url = image_info['unescapedUrl']
+          try:
+            image_r = requests.get(url)
+          except ConnectionError, e:
+            print 'could not download %s' % url
+            continue
+    
+          # Remove file-system path characters from name.
+          title = image_info['titleNoFormatting'].replace('/', '').replace('\\', '').replace('.','').replace('|','')
+    
+          file = open(os.path.join(BASE_PATH, '%s.jpg') % img_title, 'wb')
+          img_title = img_title + 1
+          try:
+            Image.open(StringIO(image_r.content)).save(file, 'JPEG')
+          except IOError, e:
+            # Throw away some gifs...blegh.
+            print 'could not save %s' % url
+            continue
+          finally:
+            file.close()
+    
+        print start
+        start += 4 # 4 images per page.
+    
+        # Be nice to Google and they'll be nice back :)
+        time.sleep(1.5)
+    
+    except:
         continue
-
-      # Remove file-system path characters from name.
-      title = image_info['titleNoFormatting'].replace('/', '').replace('\\', '').replace('.','').replace('|','')
-
-      file = open(os.path.join(BASE_PATH, '%s.jpg') % img_title, 'wb')
-      img_title = img_title + 1
-      try:
-        Image.open(StringIO(image_r.content)).save(file, 'JPEG')
-      except IOError, e:
-        # Throw away some gifs...blegh.
-        print 'could not save %s' % url
-        continue
-      finally:
-        file.close()
-
-    print start
-    start += 4 # 4 images per page.
-
-    # Be nice to Google and they'll be nice back :)
-    time.sleep(1.5)
 
 #the main part of the script
 url_painter = "http://www.thefamouspeople.com/painters.php"
@@ -65,8 +70,9 @@ data = BeautifulSoup("".join(pagehtml))
 painters = data.findAll("a", {"class":"btn btn-primary btn-sm btn-block btn-block-margin"})
 #print painters
 for painter in painters:
-    painter = "".join(painter)
-    painter = "".join(re.split(r">|<",painter))+" painting"
+    painter = painter.contents[0]+" painting"
+    #painter = "".join(str(painter))
+    #painter = "".join(re.split(r">|<",painter))+" painting"
     #print painter
     try:
         go(painter,'imageDB')
@@ -80,4 +86,4 @@ for painter in painters:
 #for painter_info i json.loads(website.text)[]
 '''
 # Example use
-#go('pablo picaso paintings', 'imageDB')
+#go('pablo picaso paintings', 'imageDB')'''
